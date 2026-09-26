@@ -180,12 +180,31 @@ sequenceDiagram
         Hub->>Hub: 설치 완료 상태 검증·갱신
         Hub-->>HubClient: 설치 완료 결과 전달
         HubClient-->>User: 글로벌 설치 완료 알림 표시
-        User->>HubClient: 게임 실행 선택
-        HubClient->>SourceManager: 선택 콘솔로 HDMI 입력 전환 요청
-        SourceManager-->>HubClient: 입력 전환 결과
-        HubClient->>Partner: 게임 상세 화면 딥링크 요청
-        Partner->>Console: 네트워크 딥링크 명령
-        Console-->>User: 게임 실행 직전 상세 화면 표시
+        User->>HubClient: 설치 완료 알림 선택
+        HubClient->>SourceManager: 콘솔 연결 상태 조회
+        alt Cold Off: 연결·전원 상태 확인 불가
+            SourceManager-->>HubClient: COLD_OFF
+            HubClient-->>User: TV와 콘솔 연결·전원 상태 확인 안내
+        else Inactive: 연결됨·전원 제어 가능·현재 입력 아님
+            SourceManager-->>HubClient: INACTIVE
+            par HDMI 제어
+                HubClient->>SourceManager: HDMI-CEC 전원 켜기 요청
+                SourceManager->>Console: Tizen System API로 전원 켜기
+                Console-->>SourceManager: 전원 켜짐 상태
+                SourceManager->>Console: HDMI 입력 소스 전환
+            and 네트워크 딥링크
+                HubClient->>Partner: 게임 상세 화면 딥링크 요청
+                Partner->>Console: 네트워크 딥링크 명령
+            end
+            Console-->>User: 게임 실행 직전 상세 화면 표시
+        else Active: 전원 켜짐·현재 상태 감지됨
+            SourceManager-->>HubClient: ACTIVE
+            HubClient->>SourceManager: HDMI 입력 소스 전환 요청
+            SourceManager->>Console: HDMI 입력 전환
+            HubClient->>Partner: 게임 상세 화면 딥링크 요청
+            Partner->>Console: 네트워크 딥링크 명령
+            Console-->>User: 게임 실행 직전 상세 화면 표시
+        end
     end
 ```
 
