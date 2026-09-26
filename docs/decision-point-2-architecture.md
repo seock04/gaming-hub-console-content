@@ -91,12 +91,16 @@ sequenceDiagram
 3. Gaming Hub 클라이언트가 성인 프로파일에 허용된 콘솔 게임 콘텐츠를 노출한다.
 4. 사용자가 게임 상세 정보와 가격을 확인하고 구매를 요청한다.
 5. Gaming Hub 서버가 결제 요청을 생성한다.
-6. 결제 시스템이 결제를 처리하고, Gaming Hub 서버가 결제 결과를 검증한다.
-7. 사용자가 설치할 콘솔 장치를 선택한다.
-8. 파트너 서버가 콘솔 장치의 연결 상태와 설치 가능 여부를 확인한다.
-9. 원격 설치 서버를 통해 선택한 콘솔에 설치를 요청한다.
-10. 설치 상태와 완료 결과를 Gaming Hub 클라이언트에 전달한다.
-11. 설치가 완료되면 사용자에게 알리고, 사용자의 현재 TV 상태에 따라 콘솔 입력 전환과 딥링크를 수행한다.
+6. 결제 시스템이 결제를 처리하고 Gaming Hub 서버에 결제 완료 웹훅을 호출한다.
+7. Gaming Hub 서버가 웹훅을 검증하고 최종 결제 완료 상태를 확정한다.
+8. Gaming Hub 서버가 Gaming Hub 클라이언트에 최종 결제 완료 결과를 전달한다.
+9. Gaming Hub 클라이언트가 성인 사용자에게 결제 완료 화면을 표시한다.
+10. 결제 완료 표시가 끝난 뒤 Step 2 원격 설치를 시작한다.
+11. 사용자가 설치할 콘솔 장치를 선택한다.
+12. 파트너 서버가 콘솔 장치의 연결 상태와 설치 가능 여부를 확인한다.
+13. 원격 설치 서버를 통해 선택한 콘솔에 설치를 요청한다.
+14. 설치 상태와 완료 결과를 Gaming Hub 클라이언트에 전달한다.
+15. 설치가 완료되면 사용자에게 알리고, 사용자의 현재 TV 상태에 따라 콘솔 입력 전환과 딥링크를 수행한다.
 
 ```mermaid
 sequenceDiagram
@@ -132,10 +136,10 @@ sequenceDiagram
         PartnerPay->>Hub: 결제 완료 웹훅 호출
     end
     Hub->>Hub: 웹훅 검증 및 결제 완료 상태 확정
-    Hub-->>HubClient: 최종 결제 완료 결과 전달
-    HubClient-->>User: 결제 완료 화면 및 원격 설치 안내 표시
-    Note over HubClient,User: Step 1 종료: 클라이언트가 사용자에게 결제 완료를 표시
-    Note over Hub,HubClient: Step 2 시작: 원격 설치
+    Hub-->>HubClient: 웹훅 검증 후 최종 결제 완료 이벤트 전달
+    HubClient-->>User: 결제 완료 화면 표시
+    Note over HubClient,User: Step 1 종료: 사용자 화면에 결제 완료 표시
+    Note over HubClient,User: Step 2 시작: 결제 완료 표시 후 원격 설치
     HubClient->>Partner: 원격 설치 가능한 콘솔 장치 목록 조회
     Partner-->>HubClient: 장치 목록·전원 상태·설치 가능 상태 반환
     HubClient-->>User: 선택 가능한 콘솔 장치 목록 표시
