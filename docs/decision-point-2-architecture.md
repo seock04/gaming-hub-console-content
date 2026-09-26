@@ -69,7 +69,7 @@ Gaming Hub는 Xbox, PlayStation, Nintendo 등 콘솔 파트너의 콘텐츠를 T
 ```mermaid
 sequenceDiagram
     actor User as 미성년 사용자
-    participant TV as TV 클라이언트
+    participant SourceManager as Source Manager
     participant Profile as TV 프로파일 클라이언트
     participant HubClient as Gaming Hub 클라이언트
     participant ProfileServer as 프로파일 서버
@@ -148,10 +148,10 @@ sequenceDiagram
     HubClient->>Partner: 선택 장치 원격 설치 준비 요청
     Partner-->>HubClient: 선택 장치가 현재 TV 연결 콘솔인지·전원 상태 반환
     alt 현재 TV에 연결된 콘솔이며 전원 꺼짐
-        HubClient->>TV: HDMI-CEC 전원 켜기 요청
-        TV->>Console: 콘솔 전원 켜기
-        Console-->>TV: 전원 켜짐 상태
-        TV-->>HubClient: 전원 켜짐 결과
+        HubClient->>SourceManager: HDMI-CEC 전원 켜기 요청
+        SourceManager->>Console: 콘솔 전원 켜기
+        Console-->>SourceManager: 전원 켜짐 상태
+        SourceManager-->>HubClient: 전원 켜짐 결과
         HubClient->>Partner: 콘솔 전원 켜짐 결과 전달
         Partner->>Console: 원격 설치 시작
     else 설치 가능한 원격 콘솔
@@ -170,8 +170,8 @@ sequenceDiagram
         Hub-->>HubClient: 설치 완료 결과 전달
         HubClient-->>User: 글로벌 설치 완료 알림 표시
         User->>HubClient: 게임 실행 선택
-        HubClient->>TV: 선택 콘솔로 HDMI 입력 전환 요청
-        TV-->>HubClient: 입력 전환 결과
+        HubClient->>SourceManager: 선택 콘솔로 HDMI 입력 전환 요청
+        SourceManager-->>HubClient: 입력 전환 결과
         HubClient->>Partner: 게임 상세 화면 딥링크 요청
         Partner->>Console: 네트워크 딥링크 명령
         Console-->>User: 게임 실행 직전 상세 화면 표시
@@ -228,8 +228,8 @@ sequenceDiagram
     Hub-->>HubClient: 설치 결과 및 실행 안내
     HubClient-->>User: 설치 결과 및 실행 안내
     opt 사용자가 실행을 선택하고 콘솔 전환 가능
-        HubClient->>Profile: TV 입력 상태 확인·전환 요청
-        Profile->>Console: 입력 전환 및 딥링크 명령
+        HubClient->>SourceManager: 입력 상태 확인·전환 요청
+        SourceManager->>Console: 입력 전환
         Console-->>HubClient: 게임 상세 화면 표시 결과
     end
 ```
@@ -251,7 +251,7 @@ sequenceDiagram
 
 ## 6. 시스템 모듈 및 관계
 
-다음 관계도는 DP2에서 고려하는 주요 모듈의 경계를 나타낸다. 삼성 계정은 모바일·TV·가전 등 전사 서비스에서 공유되는 계정이며, TV 프로파일은 TV 클라이언트와 삼성 VD 서버 범위에서만 관리되는 별도 개념이다.
+다음 관계도는 DP2에서 고려하는 주요 모듈의 경계를 나타낸다. 삼성 계정은 모바일·TV·가전 등 전사 서비스에서 공유되는 계정이며, TV 프로파일은 Source Manager와 프로파일 서버 범위에서만 관리되는 별도 개념이다.
 
 콘솔 파트너 서버는 파트너 계정·서비스 제어 영역과 실제 게임 콘텐츠 다운로드 영역으로 나누어 표현한다. 콘솔 파트너 클라이언트는 실제 콘솔 장치 내부에서 동작하는 소프트웨어다. 딥링크는 별도 모듈이 아니라 Gaming Hub 클라이언트와 콘솔 파트너 클라이언트 사이에서 수행되는 기능이다.
 
@@ -268,7 +268,7 @@ flowchart LR
     end
 
     subgraph TV[삼성 TV]
-        TVClient[TV 클라이언트]
+        SourceManager[Source Manager\nTV 입력·HDMI-CEC 제어]
         HubClient[Gaming Hub 클라이언트]
     end
 
@@ -284,15 +284,15 @@ flowchart LR
 
     AccountClient <--> AccountServer
     AccountServer <--> VDServer
-    TVClient <--> VDServer
+    SourceManager <--> VDServer
     VDServer <--> ProfileServer
-    TVClient <--> HubClient
+    SourceManager <--> HubClient
     HubClient <--> HubServer
     HubServer <--> PartnerServer
     PartnerServer <--> ContentServer
     PartnerServer <--> ConsoleClient
     ContentServer --> ConsoleClient
-    HubClient -. "딥링크·입력 전환 기능" .-> TVClient
+    HubClient -. "입력 전환·HDMI-CEC 기능" .-> SourceManager
     HubClient -. "딥링크 명령" .-> ConsoleClient
 ```
 
