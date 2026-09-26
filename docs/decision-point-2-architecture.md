@@ -181,8 +181,7 @@ sequenceDiagram
     else 설치 완료
         Partner->>Hub: 설치 완료 웹훅 호출
         Hub->>Hub: 설치 완료 상태 검증·갱신
-        Hub-->>HubClient: 설치 완료 결과 전달
-        HubClient->>Nudge: 설치 완료 글로벌 노티 요청
+        Hub->>Nudge: 설치 완료 이벤트·글로벌 노티 요청
         Nudge-->>User: 설치 완료 팝업 표시
         User->>Nudge: 설치 완료 알림 선택
         Nudge-->>HubClient: 알림 선택 이벤트 전달
