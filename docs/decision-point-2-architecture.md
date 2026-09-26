@@ -138,7 +138,8 @@ sequenceDiagram
         PartnerPay-->>User: 결제 인증·결과 제공
         PartnerPay->>Hub: 결제 완료 웹훅 호출
         Hub->>Hub: 웹훅 검증 및 결제 완료 상태 확정
-        Hub-->>HubClient: 웹훅 검증 후 결제 상태 확정
+        HubClient->>Hub: 결제 완료 여부 확인 요청
+        Hub-->>HubClient: 확인 요청 응답: COMPLETED
     end
     HubClient-->>User: 결제 완료 화면 표시
     Note over HubClient,User: Step 1 종료: 사용자 화면에 결제 완료 표시
