@@ -83,15 +83,6 @@ sequenceDiagram
     User->>HubClient: Gaming Hub 클라이언트 진입
     HubClient->>Profile: 현재 프로파일 유형 조회 API 호출
     Profile-->>HubClient: 현재 프로파일 유형·상태 반환
-    alt 미성년 프로파일
-        HubClient->>Profile: 미성년 프로파일 정책 조회 API 호출
-        Profile->>ProfileServer: 미성년 정책 조회
-        ProfileServer-->>Profile: 미성년 정책 반환
-        Profile-->>HubClient: 미성년 정책 반환
-        HubClient->>HubClient: 미성년 정책 적용
-    else 성인 프로파일
-        HubClient->>HubClient: 성인 프로파일 정책 적용
-    end
     HubClient->>Hub: 적용된 정책 기준 콘텐츠 조회
     Hub-->>HubClient: 정책에 맞는 게임 콘텐츠 반환
     HubClient-->>User: 정책에 맞는 게임 콘텐츠 노출
