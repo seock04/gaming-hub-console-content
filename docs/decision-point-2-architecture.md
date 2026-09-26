@@ -74,7 +74,9 @@ sequenceDiagram
     participant HubClient as Gaming Hub 클라이언트
     participant ProfileServer as 프로파일 서버
     participant Hub as Gaming Hub 서버
-    participant Pay as 결제 시스템
+    participant CheckoutClient as 삼성 체크아웃 클라이언트
+    participant CheckoutServer as 삼성 체크아웃 결제 시스템
+    participant PartnerPay as 파트너 결제 시스템
     participant Account as 삼성 계정 서버
     actor Parent as 보호자
     participant Install as 원격 설치 서버
@@ -113,11 +115,23 @@ sequenceDiagram
             HubClient-->>User: 결제 불가 사유 표시
         end
     end
-    Note over HubClient,Pay: 승인 완료가 확인된 경우에만 결제 요청 진행
-    HubClient->>Pay: 결제 요청
-    Pay-->>Hub: 결제 결과 통지
-    Hub->>Pay: 결제 결과 검증
-    Pay-->>Hub: 검증 결과 반환
+    Note over HubClient,Hub: 승인 완료가 확인된 경우에만 결제 요청 진행
+    alt 삼성 체크아웃 결제
+        HubClient->>CheckoutClient: 삼성 체크아웃 결제 화면 실행
+        CheckoutClient->>CheckoutServer: 결제 요청
+        CheckoutServer-->>CheckoutClient: 결제 진행·완료 결과
+        CheckoutServer->>Hub: 결제 완료 웹훅 호출
+    else 파트너 결제 시스템
+        HubClient->>PartnerPay: 파트너 결제 요청
+        PartnerPay-->>HubClient: QR 코드 표시 정보 반환
+        HubClient-->>User: 파트너 결제 QR 코드 표시
+        User->>PartnerPay: 모바일 카메라로 QR 코드 스캔
+        PartnerPay-->>User: 파트너 결제 화면·인증 제공
+        PartnerPay->>Hub: 결제 완료 웹훅 호출
+    end
+    Hub->>Hub: 결제 완료 웹훅 검증·주문 상태 갱신
+    Hub-->>HubClient: 결제 완료 결과 전달
+    HubClient-->>User: 결제 완료 및 다음 단계 표시
     User->>HubClient: 설치할 콘솔 장치 선택
     HubClient->>Hub: 설치 요청
     Hub->>Install: 장치 상태 확인 및 원격 설치 요청
