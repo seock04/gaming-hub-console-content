@@ -232,6 +232,13 @@ sequenceDiagram
 - 파트너별 원격 설치 API와 상태 모델의 차이를 공통 모델로 추상화하는 방법
 - HDMI-CEC 제어와 네트워크 명령의 책임 분리 및 실패 처리
 - 사용자가 TV 시청 중이거나 콘솔을 이미 사용 중일 때의 입력 전환 정책
+- 설치 완료 후 UI 앱이 종료된 상태에서도 TV 백그라운드 서비스가 동작할 수 있는지와 운영 제약
+- 백그라운드 서비스의 폴링 주기, 중복 폴링 방지, 배터리·리소스·네트워크 비용
+- Proactive Nudge 호출 권한과 알림 선택 이벤트를 UI 앱으로 전달하는 TV 플랫폼 계약
+- 결제 완료 후 콘솔 파트너 서버에 상품 권한을 동기화하는 API와 실패 시 재처리 정책
+- 삼성 체크아웃·파트너 결제별 결제 식별자와 콘솔 파트너 상품 식별자의 매핑
+- Cold Off·Inactive·Active 상태 판별의 정확한 주체와 Tizen API가 제공하는 상태 범위
+- 설치 완료 후 HDMI 입력 전환과 네트워크 딥링크의 순서·병렬 처리 및 타임아웃
 - 설치 완료 이벤트의 지연·중복·순서 뒤바뀜 처리
 - 개인정보, 결제 정보, 미성년자 보호를 포함한 보안 및 감사 추적
 
@@ -245,8 +252,11 @@ DP2의 원격 설치는 사용자가 화면을 떠난 뒤에도 20~30분 이상 
 |---|---|---|
 | Gaming Hub 서버 ↔ 콘솔 파트너 서버 | HTTPS REST API | 원격 설치 시작, 딥링크 요청, 작업 명령 |
 | 콘솔 파트너 서버 → Gaming Hub 서버 | 서명된 HTTPS 웹훅 | 설치 시작·진행·완료·실패 이벤트 전달 |
-| Gaming Hub 클라이언트 ↔ 콘솔 파트너 서버 | 파트너 공식 HTTPS API | 파트너 계정에 연결된 장치 목록 조회와 장치 선택 |
-| Gaming Hub 클라이언트 ↔ Source Manager | Tizen Managed API | HDMI-CEC 전원 제어, 입력 소스 전환, 현재 연결 상태 확인 |
+| Gaming Hub UI 앱 클라이언트 ↔ 콘솔 파트너 서버 | 파트너 공식 HTTPS API | 파트너 계정에 연결된 장치 목록 조회와 장치 선택 |
+| Gaming Hub UI 앱 클라이언트 ↔ TV 프로파일 클라이언트 | TV 프로파일 클라이언트 API | 현재 프로파일 상태 조회와 구매 정책 확인 |
+| Gaming Hub 백그라운드 서비스 → Gaming Hub 서버 | HTTPS 상태 조회 API | 화면이 보이지 않는 동안 설치 상태 폴링 |
+| Gaming Hub 백그라운드 서비스 → Proactive Nudge | TV 플랫폼 API | 설치 진행·완료·실패 글로벌 노티 요청 |
+| Gaming Hub UI 앱 클라이언트 ↔ Source Manager | Tizen Managed API | HDMI-CEC 전원 제어, 입력 소스 전환, 현재 연결 상태 확인 |
 | Source Manager ↔ 콘솔 | Tizen System API | 플랫폼이 제공하는 콘솔 연동과 HDMI 입력 제어 |
 | 콘솔 파트너 서버 ↔ 콘솔 클라이언트 | 파트너 네트워크 명령 | 원격 설치와 게임 상세 화면 딥링크 |
 
@@ -254,16 +264,18 @@ DP2의 원격 설치는 사용자가 화면을 떠난 뒤에도 20~30분 이상 
 
 ### 6.2 설치 작업 오케스트레이션
 
-1. 결제가 최종 완료되면 Gaming Hub 서버가 설치 작업과 사용자의 자동 실행 의도를 저장한다.
-2. Gaming Hub 클라이언트가 파트너 서버에서 원격 설치 가능한 장치 목록을 직접 조회한다.
-3. 사용자가 장치를 선택하면 Gaming Hub 클라이언트가 파트너 서버에 설치 준비를 요청한다.
+1. 결제가 최종 완료되고 콘솔 파트너 서버에 구매 권한이 반영되면 Gaming Hub 서버가 설치 작업과 사용자의 자동 실행 의도를 저장한다.
+2. Gaming Hub UI 앱 클라이언트가 파트너 서버에서 원격 설치 가능한 장치 목록을 직접 조회한다.
+3. 사용자가 장치를 선택하면 Gaming Hub UI 앱 클라이언트가 파트너 서버에 설치 준비를 요청한다.
 4. 파트너가 장치 상태를 반환하고, 선택한 장치가 현재 TV에 연결된 콘솔인지 확인한다.
-5. 연결된 콘솔의 전원이 꺼져 있으면 Gaming Hub 클라이언트가 Tizen Managed API를 통해 Source Manager에 HDMI-CEC 전원 켜기를 요청한다.
-6. Source Manager가 전원 켜짐 결과를 반환하고, Gaming Hub 클라이언트가 그 결과를 파트너 서버에 전달한다.
-7. Gaming Hub 서버 또는 클라이언트가 파트너 서버에 원격 설치 시작을 요청한다.
+5. 연결된 콘솔의 전원이 꺼져 있으면 Gaming Hub UI 앱 클라이언트가 Tizen Managed API를 통해 Source Manager에 HDMI-CEC 전원 켜기를 요청한다.
+6. Source Manager가 전원 켜짐 결과를 반환하고, Gaming Hub UI 앱 클라이언트가 그 결과를 파트너 서버에 전달한다.
+7. Gaming Hub UI 앱 클라이언트가 파트너 서버에 원격 설치 시작을 요청하고, 설치 요청 접수 화면을 표시한다.
 8. 파트너 서버가 설치를 수행하고 Gaming Hub 서버의 웹훅으로 상태 이벤트를 전달한다.
 9. Gaming Hub 서버가 이벤트를 검증하고 설치 상태를 갱신한다.
-10. 설치 완료 시 Gaming Hub 서버가 설치 완료와 자동 실행 의도를 Gaming Hub 클라이언트에 전달한다. Gaming Hub 클라이언트가 Source Manager에 입력 전환을 요청하고, 파트너 서버에 딥링크를 요청한다.
+10. Gaming Hub 백그라운드 서비스가 폴링으로 설치 완료를 확인하고 Proactive Nudge에 글로벌 노티를 요청한다.
+11. 사용자가 완료 노티를 선택하면 Gaming Hub UI 앱 클라이언트가 Source Manager에 상태를 조회한다.
+12. Cold Off·Inactive·Active 상태에 따라 전원 켜기와 입력 전환을 수행하고, 가능한 경우 파트너 서버에 딥링크를 요청한다.
 
 ### 6.3 설치 상태 모델
 
@@ -284,13 +296,14 @@ DP2의 원격 설치는 사용자가 화면을 떠난 뒤에도 20~30분 이상 
 - 설치 요청과 이벤트에는 작업 ID, 이벤트 ID, correlation ID를 사용한다.
 - 동일한 웹훅이 여러 번 도착해도 한 번만 상태를 전이시키도록 멱등성을 보장한다.
 - 웹훅은 빠르게 `2xx`로 수신 확인을 반환하고, 실제 상태 처리는 비동기로 수행한다.
-- Gaming Hub 클라이언트가 화면에 보이지 않는 동안에도 서버가 설치 상태를 보존한다. Source Manager 호출은 Gaming Hub 클라이언트가 Tizen Managed API를 통해 수행한다.
+- Gaming Hub UI 앱이 화면에 보이지 않는 동안에도 Gaming Hub 백그라운드 서비스가 서버 상태를 폴링한다. Source Manager 호출은 UI 앱이 Tizen Managed API를 통해 수행한다.
+- Gaming Hub 서버는 Proactive Nudge를 직접 호출하지 않는다. 백그라운드 서비스가 TV 플랫폼 API를 통해 Proactive Nudge를 호출한다.
 - 설치 완료 후 자동 입력 전환과 딥링크는 사용자의 사전 선택 또는 동의를 전제로 한다.
 - 장치 목록과 파트너 계정 정보는 Gaming Hub 서버에 저장하지 않고, 클라이언트와 파트너 사이에서 최소 범위로 처리한다.
 
 ## 7. 시스템 모듈 및 관계
 
-다음 관계도는 DP2에서 고려하는 주요 모듈의 경계를 나타낸다. 삼성 계정은 모바일·TV·가전 등 전사 서비스에서 공유되는 계정이며, TV 프로파일은 Source Manager와 프로파일 서버 범위에서만 관리되는 별도 개념이다.
+다음 관계도는 DP2에서 고려하는 주요 모듈의 경계를 나타낸다. 삼성 계정은 모바일·TV·가전 등 전사 서비스에서 공유되는 계정이며, TV 프로파일은 TV 프로파일 클라이언트와 프로파일 서버 범위에서만 관리되는 별도 개념이다.
 
 콘솔 파트너 서버는 파트너 계정·서비스 제어 영역과 실제 게임 콘텐츠 다운로드 영역으로 나누어 표현한다. 콘솔 파트너 클라이언트는 실제 콘솔 장치 내부에서 동작하는 소프트웨어다. 딥링크는 별도 모듈이 아니라 Gaming Hub UI 앱 클라이언트와 콘솔 파트너 클라이언트 사이에서 수행되는 기능이다.
 
@@ -307,14 +320,21 @@ flowchart LR
     end
 
     subgraph TV[삼성 TV]
+        ProfileClient[TV 프로파일 클라이언트]
         SourceManager[Source Manager\nTV 입력·HDMI-CEC 제어]
         HubUI[Gaming Hub UI 앱 클라이언트]
         HubBackground[Gaming Hub 백그라운드 서비스]
         Nudge[Proactive Nudge]
+        CheckoutClient[삼성 체크아웃 클라이언트]
     end
 
     subgraph Hub[Gaming Hub 서비스]
         HubServer[Gaming Hub 서버]
+    end
+
+    subgraph Payment[결제 시스템]
+        CheckoutServer[삼성 체크아웃 결제 시스템]
+        PartnerPay[파트너 결제 시스템]
     end
 
     subgraph Partner[Xbox·PlayStation·Nintendo 등 콘솔 파트너]
@@ -325,23 +345,30 @@ flowchart LR
 
     AccountClient <--> AccountServer
     AccountServer <--> VDServer
-    SourceManager <--> VDServer
-    VDServer <--> ProfileServer
-    SourceManager <--> HubUI
-    HubUI <--> HubServer
-    HubBackground <--> HubServer
-    HubBackground --> Nudge
-    HubServer <--> PartnerServer
+    ProfileClient <--> ProfileServer
+    HubUI -. "프로파일 상태·정책 조회 API" .-> ProfileClient
+    HubUI --> HubServer
+    HubUI -. "결제 요청" .-> CheckoutClient
+    CheckoutClient --> CheckoutServer
+    HubUI -. "QR 결제 요청" .-> PartnerPay
+    CheckoutServer -. "결제 완료 웹훅" .-> HubServer
+    PartnerPay -. "결제 완료 웹훅" .-> HubServer
+    HubBackground -. "설치 상태 폴링" .-> HubServer
+    HubBackground -. "TV 플랫폼 API: 글로벌 노티 요청" .-> Nudge
+    Nudge -. "알림 선택 이벤트" .-> HubUI
+    HubServer -. "REST 명령·구매 권한 동기화" .-> PartnerServer
+    PartnerServer -. "서명 웹훅" .-> HubServer
+    HubUI -. "파트너 API: 장치 목록·설치 준비" .-> PartnerServer
     PartnerServer <--> ContentServer
-    PartnerServer <--> ConsoleClient
+    PartnerServer -. "네트워크 명령" .-> ConsoleClient
     ContentServer --> ConsoleClient
-    HubUI -. "Tizen Managed API: 입력 전환·HDMI-CEC 기능" .-> SourceManager
-    HubUI -. "딥링크 명령" .-> ConsoleClient
+    HubUI -. "Tizen Managed API" .-> SourceManager
+    SourceManager -. "Tizen System API·HDMI-CEC" .-> ConsoleClient
 ```
 
 ## 8. 설계안
 
-### 6.1 설계안 1: [제목 작성]
+### 8.1 설계안 1: [제목 작성]
 
 #### 개요
 
@@ -371,7 +398,7 @@ flowchart LR
 
 - [작성]
 
-### 6.2 설계안 2: [제목 작성]
+### 8.2 설계안 2: [제목 작성]
 
 #### 개요
 
@@ -419,13 +446,13 @@ flowchart LR
 
 DP2와 직접 연관된 품질 속성 세 가지를 선정하고, 각 설계안이 이를 얼마나 만족하는지 평가한다.
 
-### 8.1 품질 속성 후보
+### 10.1 품질 속성 후보
 
 1. **신뢰성**: 결제·설치·완료 상태가 유실되거나 잘못 연결되지 않고 일관되게 처리되는가
 2. **보안 및 안전성**: 프로파일 권한, 미성년자 보호, 결제 및 장치 제어가 안전하게 동작하는가
 3. **사용성 및 응답성**: 사용자가 현재 상태를 이해하고 불필요한 입력 전환이나 혼란 없이 게임을 실행할 수 있는가
 
-### 8.2 품질 속성별 비교
+### 10.2 품질 속성별 비교
 
 | 품질 속성 | 설계안 1의 만족 방식 | 설계안 1의 한계 | 설계안 2의 만족 방식 | 설계안 2의 한계 | 트레이드오프 |
 |---|---|---|---|---|---|
