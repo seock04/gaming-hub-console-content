@@ -57,8 +57,8 @@ Gaming Hub는 Xbox, PlayStation, Nintendo 등 콘솔 파트너의 콘텐츠를 T
 5. 프로파일이 미성년인 경우 Gaming Hub 클라이언트가 미성년 프로파일 정책을 적용한다. 성인인 경우 성인 프로파일 정책을 적용한다.
 6. Gaming Hub 클라이언트가 적용된 정책에 따라 노출 가능한 콘솔 게임 콘텐츠를 조회하고 표시한다.
 7. 사용자가 게임 상세 정보를 확인하고 구매를 요청한다.
-8. Gaming Hub 서버가 현재 프로파일의 구매 가능 여부를 확인한다.
-9. 보호자 승인이나 추가 인증이 필요한 경우 해당 절차를 완료한다.
+8. Gaming Hub 클라이언트가 캐시된 정보 또는 TV 프로파일 클라이언트 API를 통해 현재 활성 프로파일과 보호자 승인·추가 인증 필요 여부를 재확인한다.
+9. 보호자 승인이나 추가 인증이 필요한 경우 Gaming Hub 서버를 통해 해당 절차를 진행한다.
 10. 결제 시스템이 결제를 처리하고, Gaming Hub 서버가 결제 결과를 검증한다.
 11. 사용자가 설치할 콘솔 장치를 선택한다.
 12. Gaming Hub 서버가 콘솔 연동 상태와 설치 가능 여부를 확인한다.
@@ -87,13 +87,11 @@ sequenceDiagram
     Hub-->>HubClient: 정책에 맞는 게임 콘텐츠 반환
     HubClient-->>User: 정책에 맞는 게임 콘텐츠 노출
     User->>HubClient: 게임 상세 확인 및 구매 요청
-    HubClient->>Hub: 구매 가능 여부 확인
-    Hub-->>HubClient: 보호자 승인·추가 인증 필요 여부
+    HubClient->>Profile: 현재 활성 프로파일·승인 필요 여부 확인 API 호출
+    Profile-->>HubClient: 활성 프로파일·보호자 승인·추가 인증 필요 여부 반환
     opt 승인 또는 추가 인증 필요
-        HubClient->>Profile: 승인에 필요한 프로파일 상태 확인
-        Profile->>ProfileServer: 승인 상태 확인
-        ProfileServer-->>Profile: 승인 결과 반환
-        Profile-->>HubClient: 승인 결과 전달
+        HubClient->>Hub: 보호자 승인·추가 인증 요청 생성
+        Hub-->>HubClient: 승인 절차 상태 반환
     end
     HubClient->>Pay: 결제 요청
     Pay-->>Hub: 결제 결과 통지
