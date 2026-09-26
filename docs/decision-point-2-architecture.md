@@ -46,25 +46,18 @@ Gaming Hub는 Xbox, PlayStation, Nintendo 등 콘솔 파트너의 콘텐츠를 T
 9. 설치 완료 결과를 Gaming Hub 클라이언트에 전달한다.
 10. 사용자의 현재 TV·HDMI·콘솔 상태에 따라 알림, 입력 전환, 딥링크를 수행한다.
 
-### 4.1 사용자 시나리오 A: 미성년 프로파일의 구매 및 원격 설치
+### 4.1 사용자 시나리오 A: 미성년 프로파일의 구매·원격 설치 차단
 
-미성년 프로파일은 게임 콘텐츠를 탐색할 수 있지만, 상품 노출과 구매 가능 여부는 연령 정책 및 보호자 승인 정책의 적용을 받는다.
+1차 정책에서는 Netflix Kids와 Amazon Prime Video Kids와 같이 미성년 프로파일의 구매와 원격 설치를 허용하지 않는다. 미성년 사용자는 허용된 게임 콘텐츠를 탐색할 수 있지만, 결제와 설치를 진행하려면 성인 프로파일로 전환해야 한다.
 
 1. 미성년 프로파일이 이미 선택된 상태에서 미성년 사용자가 TV 사용을 시작한다.
 2. 사용자가 Gaming Hub 클라이언트에 진입한다.
 3. Gaming Hub 클라이언트가 TV 프로파일 클라이언트가 제공하는 현재 프로파일 유형 조회 API를 호출한다.
-4. TV 프로파일 클라이언트가 현재 적용된 프로파일 유형이 성인인지 미성년인지 확인해 반환한다.
-5. 프로파일이 미성년인 경우 Gaming Hub 클라이언트가 미성년 프로파일 정책을 적용한다. 성인인 경우 성인 프로파일 정책을 적용한다.
-6. Gaming Hub 클라이언트가 적용된 정책에 따라 노출 가능한 콘솔 게임 콘텐츠를 조회하고 표시한다.
-7. 사용자가 게임 상세 정보를 확인하고 구매를 요청한다.
-8. Gaming Hub 클라이언트가 캐시된 정보 또는 TV 프로파일 클라이언트 API를 통해 현재 활성 프로파일과 보호자 승인·추가 인증 필요 여부를 재확인한다.
-9. 보호자 승인이나 추가 인증이 필요한 경우 Gaming Hub 서버를 통해 해당 절차를 진행한다.
-10. 결제 시스템이 결제를 처리하고, Gaming Hub 서버가 결제 결과를 검증한다.
-11. 사용자가 설치할 콘솔 장치를 선택한다.
-12. Gaming Hub 서버가 콘솔 연동 상태와 설치 가능 여부를 확인한다.
-13. 원격 설치 서버를 통해 선택한 콘솔에 설치를 요청한다.
-14. 설치 상태와 완료 결과를 Gaming Hub 클라이언트에 전달한다.
-15. 설치가 완료되면 사용자에게 알리고, 정책과 현재 TV 상태에 따라 딥링크를 수행한다.
+4. TV 프로파일 클라이언트가 현재 프로파일이 미성년임을 반환한다.
+5. Gaming Hub 클라이언트가 미성년 프로파일 정책을 적용하고 허용된 콘솔 게임 콘텐츠를 표시한다.
+6. 사용자가 게임 상세 정보를 확인하고 구매를 시도한다.
+7. Gaming Hub 클라이언트가 구매를 차단하고 “성인 프로파일에서 구매하세요” 안내를 표시한다.
+8. 결제, 콘솔 장치 선택, 원격 설치, 딥링크 단계로는 진행하지 않는다.
 
 ```mermaid
 sequenceDiagram
@@ -72,110 +65,21 @@ sequenceDiagram
     participant SourceManager as Source Manager
     participant Profile as TV 프로파일 클라이언트
     participant HubClient as Gaming Hub 클라이언트
-    participant ProfileServer as 프로파일 서버
     participant Hub as Gaming Hub 서버
-    participant CheckoutClient as 삼성 체크아웃 클라이언트
-    participant CheckoutServer as 삼성 체크아웃 결제 시스템
-    participant PartnerPay as 파트너 결제 시스템
-    participant Account as 삼성 계정 서버
-    actor Parent as 보호자
-    participant Partner as 콘솔 파트너 서버·클라이언트
-    participant Console as 콘솔 장치
+    participant ProfileServer as 프로파일 서버
 
     Note over User,Profile: 미성년 프로파일이 이미 선택된 상태
     User->>TV: TV 사용 시작
     User->>HubClient: Gaming Hub 클라이언트 진입
     HubClient->>Profile: 현재 프로파일 유형 조회 API 호출
-    Profile-->>HubClient: 현재 프로파일 유형·상태 반환
+    Profile-->>HubClient: 미성년 프로파일 유형·상태 반환
     HubClient->>Hub: 적용된 정책 기준 콘텐츠 조회
     Hub-->>HubClient: 정책에 맞는 게임 콘텐츠 반환
     HubClient-->>User: 정책에 맞는 게임 콘텐츠 노출
     User->>HubClient: 게임 상세 확인 및 구매 요청
     HubClient->>Profile: 현재 활성 프로파일·승인 필요 여부 확인 API 호출
-    Profile-->>HubClient: 활성 프로파일·보호자 승인·추가 인증 필요 여부 반환
-    opt 승인 또는 추가 인증 필요
-        HubClient->>Profile: 보호자 승인 요청
-        Profile->>ProfileServer: 보호자 관계·승인 요청 전달
-        ProfileServer->>Account: 상위 삼성 계정·인증 채널 확인
-        Account-->>ProfileServer: 보호자 인증 채널 반환
-        ProfileServer->>Account: 승인 알림 발송 요청
-        Account-->>Parent: 모바일·이메일 승인 알림
-        HubClient-->>User: 보호자 승인 대기 팝업 표시
-        loop 승인 결과 대기
-            Parent->>Account: 인증 및 승인·거절
-            Account-->>ProfileServer: 승인 결과 전달
-            ProfileServer-->>Profile: 승인 상태 전달
-            Profile->>Profile: 최종 승인 상태 확인
-            Profile-->>HubClient: 승인 상태 이벤트·조회 결과
-            HubClient-->>User: 대기 상태 갱신
-        end
-        alt 승인 완료
-            HubClient-->>User: 승인 완료 표시
-        else 거절·만료·실패
-            HubClient-->>User: 결제 불가 사유 표시
-        end
-    end
-    Note over HubClient,Hub: 승인 완료가 확인된 경우에만 결제 요청 진행
-    alt 삼성 체크아웃 결제
-        HubClient->>CheckoutClient: 삼성 체크아웃 결제 화면 실행
-        CheckoutClient->>CheckoutServer: 결제 요청
-        CheckoutServer-->>CheckoutClient: 결제 진행·완료 결과
-        CheckoutServer->>Hub: 결제 완료 웹훅 호출
-    else 파트너 결제 시스템
-        HubClient->>PartnerPay: 파트너 결제 요청
-        PartnerPay-->>HubClient: QR 코드 표시 정보 반환
-        HubClient-->>User: 파트너 결제 QR 코드 표시
-        User->>PartnerPay: 모바일 카메라로 QR 코드 스캔
-        PartnerPay-->>User: 파트너 결제 화면·인증 제공
-        loop 결제 상태 대기
-            HubClient->>Hub: 주문 상태 조회
-            Hub-->>HubClient: 결제 처리 중
-            HubClient-->>User: 결제 진행 중 화면 갱신
-        end
-        PartnerPay->>Hub: 결제 완료 웹훅 호출
-    end
-    Hub->>Hub: 결제 완료 웹훅 검증·주문 상태 갱신
-    HubClient->>Hub: 주문 상태 최종 조회
-    Hub-->>HubClient: 결제 완료 결과 반환
-    HubClient-->>User: 결제 완료 및 다음 단계 표시
-    Note over Hub,HubClient: Step 1 종료: 결제 완료 상태 확정
-    Note over Hub,HubClient: 결제 완료와 원격 설치는 분리된 상태이며, 설치 실패가 결제 환불을 의미하지 않음
-    Note over Hub,HubClient: Step 2 시작 - 원격 설치
-    HubClient->>Partner: 원격 설치 가능한 콘솔 장치 목록 조회
-    Partner-->>HubClient: 장치 목록·전원 상태·설치 가능 상태 반환
-    HubClient-->>User: 선택 가능한 콘솔 장치 목록 표시
-    User->>HubClient: 설치할 콘솔 장치 선택
-    HubClient->>Partner: 선택 장치 원격 설치 준비 요청
-    Partner-->>HubClient: 선택 장치가 현재 TV 연결 콘솔인지·전원 상태 반환
-    alt 현재 TV에 연결된 콘솔이며 전원 꺼짐
-        HubClient->>SourceManager: HDMI-CEC 전원 켜기 요청
-        SourceManager->>Console: 콘솔 전원 켜기
-        Console-->>SourceManager: 전원 켜짐 상태
-        SourceManager-->>HubClient: 전원 켜짐 결과
-        HubClient->>Partner: 콘솔 전원 켜짐 결과 전달
-        Partner->>Console: 원격 설치 시작
-    else 설치 가능한 원격 콘솔
-        HubClient->>Partner: 원격 설치 시작 요청
-        Partner->>Console: 원격 설치 시작
-    end
-    loop 설치 상태 대기
-        Partner-->>HubClient: 설치 진행 상태 또는 오류 메시지
-        HubClient-->>User: 설치 진행 상태 갱신
-    end
-    alt 설치 오류
-        HubClient-->>User: 오류 알림 및 콘솔 전환 여부 표시
-    else 설치 완료
-        Partner->>Hub: 설치 완료 웹훅
-        Hub->>Hub: 설치 완료 상태 검증·갱신
-        Hub-->>HubClient: 설치 완료 결과 전달
-        HubClient-->>User: 글로벌 설치 완료 알림 표시
-        User->>HubClient: 게임 실행 선택
-        HubClient->>SourceManager: 선택 콘솔로 HDMI 입력 전환 요청
-        SourceManager-->>HubClient: 입력 전환 결과
-        HubClient->>Partner: 게임 상세 화면 딥링크 요청
-        Partner->>Console: 네트워크 딥링크 명령
-        Console-->>User: 게임 실행 직전 상세 화면 표시
-    end
+    Profile-->>HubClient: 미성년 프로파일은 구매·설치 불가
+    HubClient-->>User: 성인 프로파일에서 구매하라는 안내 표시
 ```
 
 ### 4.2 사용자 시나리오 B: 성인 프로파일의 구매 및 원격 설치
