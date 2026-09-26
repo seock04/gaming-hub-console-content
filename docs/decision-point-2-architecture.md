@@ -66,36 +66,42 @@ Gaming Hub는 Xbox, PlayStation, Nintendo 등 콘솔 파트너의 콘텐츠를 T
 ```mermaid
 sequenceDiagram
     actor User as 미성년 사용자
-    participant TV as TV 프로파일 클라이언트
+    participant Profile as TV 프로파일 클라이언트
+    participant HubClient as Gaming Hub 클라이언트
     participant VD as 삼성 VD 서버
     participant Hub as Gaming Hub 서버
     participant Pay as 결제 시스템
     participant Install as 원격 설치 서버
     participant Console as 콘솔 장치
 
-    User->>TV: 미성년 프로파일 선택
-    TV->>VD: 프로파일 및 이용 정책 조회
-    VD-->>TV: 미성년 프로파일 정책 반환
-    TV->>Hub: 허용 콘텐츠 조회
-    Hub-->>TV: 정책에 맞는 게임 콘텐츠 반환
-    User->>TV: 게임 상세 확인 및 구매 요청
-    TV->>Hub: 구매 가능 여부 확인
-    Hub-->>TV: 보호자 승인·추가 인증 필요 여부
+    User->>Profile: 미성년 프로파일 선택
+    Profile->>VD: 프로파일 및 이용 정책 조회
+    VD-->>Profile: 미성년 프로파일 정책 반환
+    Profile->>HubClient: 선택된 프로파일과 정책 전달
+    HubClient->>Hub: 허용 콘텐츠 조회
+    Hub-->>HubClient: 정책에 맞는 게임 콘텐츠 반환
+    HubClient-->>User: 허용된 게임 콘텐츠 노출
+    User->>HubClient: 게임 상세 확인 및 구매 요청
+    HubClient->>Hub: 구매 가능 여부 확인
+    Hub-->>HubClient: 보호자 승인·추가 인증 필요 여부
     opt 승인 또는 추가 인증 필요
-        TV->>VD: 승인 상태 확인
-        VD-->>TV: 승인 결과 반환
+        HubClient->>Profile: 승인에 필요한 프로파일 상태 확인
+        Profile->>VD: 승인 상태 확인
+        VD-->>Profile: 승인 결과 반환
+        Profile-->>HubClient: 승인 결과 전달
     end
-    TV->>Pay: 결제 요청
+    HubClient->>Pay: 결제 요청
     Pay-->>Hub: 결제 결과 통지
     Hub->>Pay: 결제 결과 검증
     Pay-->>Hub: 검증 결과 반환
-    User->>TV: 설치할 콘솔 장치 선택
-    TV->>Hub: 설치 요청
+    User->>HubClient: 설치할 콘솔 장치 선택
+    HubClient->>Hub: 설치 요청
     Hub->>Install: 장치 상태 확인 및 원격 설치 요청
     Install->>Console: 게임 설치
     Console-->>Install: 설치 상태·완료 결과
     Install-->>Hub: 설치 결과 통지
-    Hub-->>TV: 설치 결과 및 실행 안내
+    Hub-->>HubClient: 설치 결과 및 실행 안내
+    HubClient-->>User: 설치 결과 및 실행 안내
 ```
 
 ### 4.2 사용자 시나리오 B: 성인 프로파일의 구매 및 원격 설치
@@ -117,35 +123,40 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor User as 성인 사용자
-    participant TV as TV 프로파일 클라이언트
+    participant Profile as TV 프로파일 클라이언트
+    participant HubClient as Gaming Hub 클라이언트
     participant VD as 삼성 VD 서버
     participant Hub as Gaming Hub 서버
     participant Pay as 결제 시스템
     participant Install as 원격 설치 서버
     participant Console as 콘솔 장치
 
-    User->>TV: 성인 프로파일 선택
-    TV->>VD: 프로파일 상태 조회
-    VD-->>TV: 성인 프로파일 상태 반환
-    TV->>Hub: 콘솔 게임 콘텐츠 조회
-    Hub-->>TV: 상품 목록 및 상세 정보 반환
-    User->>TV: 상품 확인 및 구매 요청
-    TV->>Hub: 구매 요청
+    User->>Profile: 성인 프로파일 선택
+    Profile->>VD: 프로파일 상태 조회
+    VD-->>Profile: 성인 프로파일 상태 반환
+    Profile->>HubClient: 선택된 프로파일 상태 전달
+    HubClient->>Hub: 콘솔 게임 콘텐츠 조회
+    Hub-->>HubClient: 상품 목록 및 상세 정보 반환
+    HubClient-->>User: 상품 목록 및 상세 정보 노출
+    User->>HubClient: 상품 확인 및 구매 요청
+    HubClient->>Hub: 구매 요청
     Hub->>Hub: 계정·프로파일·지역 정책 확인
-    TV->>Pay: 결제 요청
+    HubClient->>Pay: 결제 요청
     Pay-->>Hub: 결제 결과 통지
     Hub->>Pay: 결제 결과 검증
     Pay-->>Hub: 검증 결과 반환
-    User->>TV: 설치할 콘솔 장치 선택
-    TV->>Hub: 설치 요청
+    User->>HubClient: 설치할 콘솔 장치 선택
+    HubClient->>Hub: 설치 요청
     Hub->>Install: 장치 상태 확인 및 원격 설치 요청
     Install->>Console: 게임 설치
     Console-->>Install: 설치 상태·완료 결과
     Install-->>Hub: 설치 결과 통지
-    Hub-->>TV: 설치 결과 및 실행 안내
+    Hub-->>HubClient: 설치 결과 및 실행 안내
+    HubClient-->>User: 설치 결과 및 실행 안내
     opt 사용자가 실행을 선택하고 콘솔 전환 가능
-        TV->>Console: 입력 전환 및 딥링크 명령
-        Console-->>TV: 게임 상세 화면 표시
+        HubClient->>Profile: TV 입력 상태 확인·전환 요청
+        Profile->>Console: 입력 전환 및 딥링크 명령
+        Console-->>HubClient: 게임 상세 화면 표시 결과
     end
 ```
 
