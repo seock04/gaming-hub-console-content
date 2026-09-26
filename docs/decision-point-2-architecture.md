@@ -260,8 +260,8 @@ DP2의 원격 설치는 사용자가 화면을 떠난 뒤에도 20~30분 이상 
 | Gaming Hub 서버 ↔ 콘솔 파트너 서버 | HTTPS REST API | 원격 설치 시작, 딥링크 요청, 작업 명령 |
 | 콘솔 파트너 서버 → Gaming Hub 서버 | 서명된 HTTPS 웹훅 | 설치 시작·진행·완료·실패 이벤트 전달 |
 | Gaming Hub 클라이언트 ↔ 콘솔 파트너 서버 | 파트너 공식 HTTPS API | 파트너 계정에 연결된 장치 목록 조회와 장치 선택 |
-| Gaming Hub 서버 ↔ Source Manager | TV 플랫폼 표준 로컬 IPC 또는 RPC | HDMI-CEC 전원 제어, 입력 소스 전환, 현재 연결 상태 확인 |
-| Source Manager ↔ 콘솔 | HDMI-CEC 및 TV 플랫폼 제어 API | 콘솔 전원 켜기와 HDMI 입력 전환 |
+| Gaming Hub 클라이언트 ↔ Source Manager | Tizen Managed API | HDMI-CEC 전원 제어, 입력 소스 전환, 현재 연결 상태 확인 |
+| Source Manager ↔ 콘솔 | Tizen System API | 플랫폼이 제공하는 콘솔 연동과 HDMI 입력 제어 |
 | 콘솔 파트너 서버 ↔ 콘솔 클라이언트 | 파트너 네트워크 명령 | 원격 설치와 게임 상세 화면 딥링크 |
 
 파트너 장치 정보는 파트너 서버에서 Gaming Hub 서버로 전달하지 않는다. Gaming Hub 클라이언트가 파트너 인증·API를 통해 장치 목록을 직접 조회하고, Gaming Hub 서버에는 장치 개인정보나 파트너 장치 식별자를 저장하지 않는 것을 기본 원칙으로 한다.
@@ -272,12 +272,12 @@ DP2의 원격 설치는 사용자가 화면을 떠난 뒤에도 20~30분 이상 
 2. Gaming Hub 클라이언트가 파트너 서버에서 원격 설치 가능한 장치 목록을 직접 조회한다.
 3. 사용자가 장치를 선택하면 Gaming Hub 클라이언트가 파트너 서버에 설치 준비를 요청한다.
 4. 파트너가 장치 상태를 반환하고, 선택한 장치가 현재 TV에 연결된 콘솔인지 확인한다.
-5. 연결된 콘솔의 전원이 꺼져 있으면 Gaming Hub 클라이언트가 Source Manager에 로컬 IPC/RPC로 HDMI-CEC 전원 켜기를 요청한다.
+5. 연결된 콘솔의 전원이 꺼져 있으면 Gaming Hub 클라이언트가 Tizen Managed API를 통해 Source Manager에 HDMI-CEC 전원 켜기를 요청한다.
 6. Source Manager가 전원 켜짐 결과를 반환하고, Gaming Hub 클라이언트가 그 결과를 파트너 서버에 전달한다.
 7. Gaming Hub 서버 또는 클라이언트가 파트너 서버에 원격 설치 시작을 요청한다.
 8. 파트너 서버가 설치를 수행하고 Gaming Hub 서버의 웹훅으로 상태 이벤트를 전달한다.
 9. Gaming Hub 서버가 이벤트를 검증하고 설치 상태를 갱신한다.
-10. 설치 완료 시 Gaming Hub 서버가 Source Manager에 입력 전환을 요청하고, 파트너 서버에 딥링크를 요청한다.
+10. 설치 완료 시 Gaming Hub 서버가 설치 완료와 자동 실행 의도를 Gaming Hub 클라이언트에 전달한다. Gaming Hub 클라이언트가 Source Manager에 입력 전환을 요청하고, 파트너 서버에 딥링크를 요청한다.
 
 ### 6.3 설치 상태 모델
 
@@ -298,7 +298,7 @@ DP2의 원격 설치는 사용자가 화면을 떠난 뒤에도 20~30분 이상 
 - 설치 요청과 이벤트에는 작업 ID, 이벤트 ID, correlation ID를 사용한다.
 - 동일한 웹훅이 여러 번 도착해도 한 번만 상태를 전이시키도록 멱등성을 보장한다.
 - 웹훅은 빠르게 `2xx`로 수신 확인을 반환하고, 실제 상태 처리는 비동기로 수행한다.
-- Gaming Hub 클라이언트가 화면에 보이지 않는 동안에도 서버가 설치 상태를 보존한다.
+- Gaming Hub 클라이언트가 화면에 보이지 않는 동안에도 서버가 설치 상태를 보존한다. Source Manager 호출은 Gaming Hub 클라이언트가 Tizen Managed API를 통해 수행한다.
 - 설치 완료 후 자동 입력 전환과 딥링크는 사용자의 사전 선택 또는 동의를 전제로 한다.
 - 장치 목록과 파트너 계정 정보는 Gaming Hub 서버에 저장하지 않고, 클라이언트와 파트너 사이에서 최소 범위로 처리한다.
 
