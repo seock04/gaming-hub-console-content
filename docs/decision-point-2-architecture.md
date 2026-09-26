@@ -140,7 +140,7 @@ sequenceDiagram
     HubClient-->>User: 결제 완료 및 다음 단계 표시
     Note over Hub,HubClient: Step 1 종료: 결제 완료 상태 확정
     Note over Hub,HubClient: 결제 완료와 원격 설치는 분리된 상태이며, 설치 실패가 결제 환불을 의미하지 않음
-    == Step 2: 원격 설치 ==
+    Note over Hub,HubClient: Step 2 시작 - 원격 설치
     User->>HubClient: 설치할 콘솔 장치 선택
     HubClient->>Hub: 설치 요청
     Hub->>Install: 장치 상태 확인 및 원격 설치 요청
