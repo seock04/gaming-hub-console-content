@@ -75,6 +75,8 @@ sequenceDiagram
     participant ProfileServer as 프로파일 서버
     participant Hub as Gaming Hub 서버
     participant Pay as 결제 시스템
+    participant Account as 삼성 계정 서버
+    actor Parent as 보호자
     participant Install as 원격 설치 서버
     participant Console as 콘솔 장치
 
@@ -90,9 +92,28 @@ sequenceDiagram
     HubClient->>Profile: 현재 활성 프로파일·승인 필요 여부 확인 API 호출
     Profile-->>HubClient: 활성 프로파일·보호자 승인·추가 인증 필요 여부 반환
     opt 승인 또는 추가 인증 필요
-        HubClient->>Hub: 보호자 승인·추가 인증 요청 생성
-        Hub-->>HubClient: 승인 절차 상태 반환
+        HubClient->>Profile: 보호자 승인 요청
+        Profile->>ProfileServer: 보호자 관계·승인 요청 전달
+        ProfileServer->>Account: 상위 삼성 계정·인증 채널 확인
+        Account-->>ProfileServer: 보호자 인증 채널 반환
+        ProfileServer->>Account: 승인 알림 발송 요청
+        Account-->>Parent: 모바일·이메일 승인 알림
+        HubClient-->>User: 보호자 승인 대기 팝업 표시
+        loop 승인 결과 대기
+            Parent->>Account: 인증 및 승인·거절
+            Account-->>ProfileServer: 승인 결과 전달
+            ProfileServer-->>Profile: 승인 상태 전달
+            Profile->>Profile: 최종 승인 상태 확인
+            Profile-->>HubClient: 승인 상태 이벤트·조회 결과
+            HubClient-->>User: 대기 상태 갱신
+        end
+        alt 승인 완료
+            HubClient-->>User: 승인 완료 표시
+        else 거절·만료·실패
+            HubClient-->>User: 결제 불가 사유 표시
+        end
     end
+    Note over HubClient,Pay: 승인 완료가 확인된 경우에만 결제 요청 진행
     HubClient->>Pay: 결제 요청
     Pay-->>Hub: 결제 결과 통지
     Hub->>Pay: 결제 결과 검증
