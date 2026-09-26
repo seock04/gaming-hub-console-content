@@ -135,3 +135,59 @@ sequenceDiagram
 Netflix와 Prime Video는 미성년 프로파일에서 구매를 제한하거나 차단하는 방식에 가깝다. Apple과 Google은 미성년 사용자의 요청을 성인에게 전달하고, 성인이 별도 기기에서 승인하는 방식을 사용한다.
 
 Gaming Hub DP2에서는 콘솔 게임 구매와 원격 설치가 연결되므로, 단순 PIN보다 승인 요청형을 중심으로 설계하는 것이 적합하다. 다만 서비스 초기에는 차단형을 기본값으로 제공하고, 파트너·지역·결제 정책이 준비된 경우 승인 요청형을 활성화하는 단계적 접근도 고려할 수 있다.
+
+## 7. 결제 완료 시간과 웹훅 대기 정책 리서치
+
+### 7.1 결제수단이 등록된 경우
+
+Shopify Engineering이 공개한 Payment Request 실험에서는 브라우저나 결제수단에 카드가 이미 준비된 사용자의 결제 완료 시간이 데스크톱 중앙값 2분 16초, 모바일 중앙값 2분 35초였다. 이 자료는 “등록된 결제수단이면 항상 수초 안에 끝난다”는 의미는 아니지만, 일반적인 결제 완료 시간은 수십 초가 아니라 대체로 수분 단위로 설계해야 함을 보여준다.
+
+참고: [Shopify Payment Request experiment](https://shopify.engineering/shaping-the-future-of-payments-in-the-browser)
+
+### 7.2 결제수단이 등록되지 않은 경우
+
+같은 실험에서 결제수단이 준비되지 않은 사용자의 결제 완료 시간은 데스크톱 중앙값 3분 13초, 모바일 중앙값 3분 22초였다. 90번째 백분위수는 데스크톱 7분 57초, 모바일 8분 08초까지 증가했다. 결제수단 입력과 인증이 추가되면 사용자 결제 화면을 수분 동안 유지할 수 있어야 한다.
+
+추가로 PYMNTS의 결제 흐름 조사에서는 일반 체크아웃 시간이 조건에 따라 108~186초로 측정되었고, 저장·간소화된 Buy Button 흐름은 60~82초로 측정되었다. ([PYMNTS Buy Button Report](https://www.pymnts.com/wp-content/uploads/2022/08/PYMNTS-2022-Buy-Button-August-2022.pdf))
+
+### 7.3 웹훅 대기와 사용자 결제 시간의 분리
+
+결제 화면에서 사용자가 결제를 완료하는 시간과 웹훅 수신 API의 응답 제한 시간은 서로 다른 값이다.
+
+- 사용자 결제 대기: 저장된 결제수단은 대략 1~3분, 미등록 결제수단은 대략 3~8분까지 고려한다.
+- 웹훅 수신 API 응답: 결제 시스템이 웹훅을 재시도할 수 있도록 빠르게 `2xx`를 반환한다. PayPal은 수신 서버가 약 5~10초 안에 응답하도록 안내하고, Adyen은 실패한 웹훅을 30초부터 시작하는 간격으로 재시도한다. ([PayPal webhook best practices](https://developer.paypal.com/expanded/best-practices/), [Adyen webhook retry queue](https://docs.adyen.com/development-resources/webhooks/troubleshoot))
+- 웹훅 미수신: 10초를 결제 실패로 판단하지 않는다. 파트너별 웹훅 SLA와 결제 세션 만료 정책을 기준으로 `처리 중` 상태를 유지한다.
+
+### 7.4 DP2 적용안
+
+#### 삼성 체크아웃 경로
+
+삼성 체크아웃 클라이언트가 결제 화면과 결제 상태를 담당한다. Gaming Hub 서버는 삼성 체크아웃 서버의 결제 완료 웹훅을 받아 주문 상태를 갱신하고, TV의 Gaming Hub 클라이언트는 삼성 체크아웃 클라이언트가 제공하는 결과를 기준으로 화면을 전환한다.
+
+#### 파트너 결제 경로
+
+파트너 결제 시스템은 QR 코드로 사용자를 모바일 결제 화면으로 이동시킨다. 결제가 완료되면 파트너 결제 서버가 Gaming Hub 서버의 웹훅을 호출한다. TV의 Gaming Hub 클라이언트는 결제 시스템을 직접 확정하지 않고, Gaming Hub 서버의 주문 상태 API를 조회해 화면을 갱신한다.
+
+```mermaid
+sequenceDiagram
+    participant HubClient as Gaming Hub 클라이언트
+    participant Partner as 파트너 결제 시스템
+    participant Hub as Gaming Hub 서버
+    participant User as 사용자 모바일
+
+    HubClient->>Partner: 파트너 결제 요청
+    Partner-->>HubClient: QR 코드 반환
+    HubClient-->>User: QR 코드 표시
+    User->>Partner: QR 스캔 및 결제 진행
+    loop 결제 상태 대기
+        HubClient->>Hub: 주문 상태 조회
+        Hub-->>HubClient: 결제 처리 중
+    end
+    Partner->>Hub: 결제 완료 웹훅
+    Hub->>Hub: 웹훅 검증 및 주문 상태 갱신
+    HubClient->>Hub: 주문 상태 재조회
+    Hub-->>HubClient: 결제 완료
+    HubClient-->>User: 결제 완료 화면 표시
+```
+
+TV 클라이언트의 상태 조회는 결제 확정 수단이 아니라 화면 갱신 수단이다. 결제 확정의 근거는 파트너 웹훅을 검증한 Gaming Hub 서버의 주문 상태로 한정한다.

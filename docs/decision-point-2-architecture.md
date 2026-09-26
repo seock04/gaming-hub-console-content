@@ -127,10 +127,16 @@ sequenceDiagram
         HubClient-->>User: 파트너 결제 QR 코드 표시
         User->>PartnerPay: 모바일 카메라로 QR 코드 스캔
         PartnerPay-->>User: 파트너 결제 화면·인증 제공
+        loop 결제 상태 대기
+            HubClient->>Hub: 주문 상태 조회
+            Hub-->>HubClient: 결제 처리 중
+            HubClient-->>User: 결제 진행 중 화면 갱신
+        end
         PartnerPay->>Hub: 결제 완료 웹훅 호출
     end
     Hub->>Hub: 결제 완료 웹훅 검증·주문 상태 갱신
-    Hub-->>HubClient: 결제 완료 결과 전달
+    HubClient->>Hub: 주문 상태 최종 조회
+    Hub-->>HubClient: 결제 완료 결과 반환
     HubClient-->>User: 결제 완료 및 다음 단계 표시
     User->>HubClient: 설치할 콘솔 장치 선택
     HubClient->>Hub: 설치 요청
