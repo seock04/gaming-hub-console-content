@@ -132,10 +132,9 @@ sequenceDiagram
         PartnerPay->>Hub: 결제 완료 웹훅 호출
     end
     Hub->>Hub: 웹훅 검증 및 결제 완료 상태 확정
-    HubClient->>Hub: 결제 상태 최종 조회
-    Hub-->>HubClient: 결제 완료 결과 반환
-    HubClient-->>User: 결제 완료 및 원격 설치 안내
-    Note over Hub,HubClient: Step 1 종료: 결제 완료와 설치 상태 분리
+    Hub-->>HubClient: 최종 결제 완료 결과 전달
+    HubClient-->>User: 결제 완료 화면 및 원격 설치 안내 표시
+    Note over HubClient,User: Step 1 종료: 클라이언트가 사용자에게 결제 완료를 표시
     Note over Hub,HubClient: Step 2 시작: 원격 설치
     HubClient->>Partner: 원격 설치 가능한 콘솔 장치 목록 조회
     Partner-->>HubClient: 장치 목록·전원 상태·설치 가능 상태 반환
