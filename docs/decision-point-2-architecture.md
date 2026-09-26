@@ -128,8 +128,8 @@ sequenceDiagram
         CheckoutServer-->>CheckoutClient: 결제 진행·완료 결과
         CheckoutServer->>Hub: 결제 완료 웹훅 호출
         Hub->>Hub: 웹훅 검증 및 결제 완료 상태 확정
-        Hub-->>CheckoutClient: 최종 결제 완료 결과 전달
-        CheckoutClient-->>HubClient: 결제 완료 결과 전달
+        HubClient->>Hub: 결제 완료 여부 확인 요청
+        Hub-->>HubClient: 결제 완료 결과 반환
     else 파트너 결제 시스템
         HubClient->>PartnerPay: 파트너 결제 요청
         PartnerPay-->>HubClient: QR 코드 반환
