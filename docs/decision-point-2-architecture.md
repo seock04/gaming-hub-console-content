@@ -143,6 +143,9 @@ sequenceDiagram
     end
     HubClient-->>User: 결제 완료 화면 표시
     Note over HubClient,User: Step 1 종료: 사용자 화면에 결제 완료 표시
+    Hub->>Partner: 구매 완료·상품 권한 정보 전달
+    Partner-->>Hub: 구매 권한 반영 결과 확인
+    Note over Hub,Partner: 결제 시스템과 콘솔 파트너 서버 사이의 구매 권한 동기화 완료
     Note over HubClient,User: Step 2 시작: 결제 완료 표시 후 원격 설치
     HubClient->>Partner: 원격 설치 가능한 콘솔 장치 목록 조회
     Partner-->>HubClient: 장치 목록·전원 상태·설치 가능 상태 반환
