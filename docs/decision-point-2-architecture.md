@@ -29,7 +29,8 @@ Gaming Hub는 Xbox, PlayStation, Nintendo 등 콘솔 파트너의 콘텐츠를 T
 | TV 프로파일 | 하나의 삼성 계정 안에서 개인화된 설정과 권한을 제공하는 사용자 단위 |
 | 미성년 프로파일 | 별도 PIN 없이 선택할 수 있으며, 연령·보호자 정책에 따라 상품 노출·구매·설치가 제한되는 프로파일 |
 | 성인 프로파일 | TV에 적용하기 전에 PIN 인증이 필요한 프로파일 |
-| Gaming Hub 클라이언트 | TV에서 콘텐츠를 탐색하고 구매·설치·실행 상태를 사용자에게 보여주는 클라이언트 |
+| Gaming Hub UI 앱 클라이언트 | TV에서 콘텐츠를 탐색하고 구매·설치·실행 상태를 사용자에게 보여주는 화면 앱 |
+| Gaming Hub 백그라운드 서비스 | 설치 완료 상태를 Gaming Hub 서버에 폴링하고 Proactive Nudge를 호출하는 백그라운드 구성요소 |
 | 콘솔 파트너 | Xbox, PlayStation, Nintendo 등 콘텐츠와 원격 기능을 제공하는 외부 파트너 |
 | 원격 설치 서버 | 사용자가 선택한 콘솔 장치에 설치 요청을 전달하고 상태를 추적하는 서버 |
 | 딥링크 | 콘솔의 특정 게임 또는 실행 직전 상세 화면까지 이동시키는 기능 |
@@ -65,7 +66,8 @@ sequenceDiagram
     actor User as 미성년 사용자
     participant SourceManager as Source Manager
     participant Profile as TV 프로파일 클라이언트
-    participant HubClient as Gaming Hub 클라이언트
+    participant HubClient as Gaming Hub UI 앱 클라이언트
+    participant HubBackground as Gaming Hub 백그라운드 서비스
     participant Hub as Gaming Hub 서버
     participant ProfileServer as 프로파일 서버
 
@@ -108,7 +110,8 @@ sequenceDiagram
 sequenceDiagram
     actor User as 성인 사용자
     participant Profile as TV 프로파일 클라이언트
-    participant HubClient as Gaming Hub 클라이언트
+    participant HubClient as Gaming Hub UI 앱 클라이언트
+    participant HubBackground as Gaming Hub 백그라운드 서비스
     participant Hub as Gaming Hub 서버
     participant CheckoutClient as 삼성 체크아웃 클라이언트
     participant CheckoutServer as 삼성 체크아웃 결제 시스템
@@ -171,17 +174,22 @@ sequenceDiagram
         Partner->>Console: 원격 설치 시작
     end
     loop 설치 상태 대기
-        Partner-->>HubClient: 설치 진행 상태 또는 오류 메시지
-        HubClient->>Nudge: 설치 진행 상태 글로벌 노티 요청
+        HubBackground->>Hub: 설치 상태 폴링
+        Hub-->>HubBackground: 설치 진행 상태
+        HubBackground->>Nudge: 설치 진행 상태 글로벌 노티 요청
         Nudge-->>User: 설치 진행 상태 팝업 표시
     end
     alt 설치 오류
-        HubClient->>Nudge: 설치 오류 글로벌 노티 요청
+        HubBackground->>Hub: 설치 완료·실패 상태 폴링
+        Hub-->>HubBackground: 설치 오류 결과 반환
+        HubBackground->>Nudge: 설치 오류 글로벌 노티 요청
         Nudge-->>User: 설치 오류 팝업 및 콘솔 전환 안내 표시
     else 설치 완료
         Partner->>Hub: 설치 완료 웹훅 호출
         Hub->>Hub: 설치 완료 상태 검증·갱신
-        Hub->>Nudge: 설치 완료 이벤트·글로벌 노티 요청
+        HubBackground->>Hub: 설치 완료 여부 폴링
+        Hub-->>HubBackground: 설치 완료 결과 반환
+        HubBackground->>Nudge: 설치 완료 이벤트·글로벌 노티 요청
         Nudge-->>User: 설치 완료 팝업 표시
         User->>Nudge: 설치 완료 알림 선택
         Nudge-->>HubClient: 알림 선택 이벤트 전달
@@ -284,7 +292,7 @@ DP2의 원격 설치는 사용자가 화면을 떠난 뒤에도 20~30분 이상 
 
 다음 관계도는 DP2에서 고려하는 주요 모듈의 경계를 나타낸다. 삼성 계정은 모바일·TV·가전 등 전사 서비스에서 공유되는 계정이며, TV 프로파일은 Source Manager와 프로파일 서버 범위에서만 관리되는 별도 개념이다.
 
-콘솔 파트너 서버는 파트너 계정·서비스 제어 영역과 실제 게임 콘텐츠 다운로드 영역으로 나누어 표현한다. 콘솔 파트너 클라이언트는 실제 콘솔 장치 내부에서 동작하는 소프트웨어다. 딥링크는 별도 모듈이 아니라 Gaming Hub 클라이언트와 콘솔 파트너 클라이언트 사이에서 수행되는 기능이다.
+콘솔 파트너 서버는 파트너 계정·서비스 제어 영역과 실제 게임 콘텐츠 다운로드 영역으로 나누어 표현한다. 콘솔 파트너 클라이언트는 실제 콘솔 장치 내부에서 동작하는 소프트웨어다. 딥링크는 별도 모듈이 아니라 Gaming Hub UI 앱 클라이언트와 콘솔 파트너 클라이언트 사이에서 수행되는 기능이다.
 
 ```mermaid
 flowchart LR
@@ -300,7 +308,9 @@ flowchart LR
 
     subgraph TV[삼성 TV]
         SourceManager[Source Manager\nTV 입력·HDMI-CEC 제어]
-        HubClient[Gaming Hub 클라이언트]
+        HubUI[Gaming Hub UI 앱 클라이언트]
+        HubBackground[Gaming Hub 백그라운드 서비스]
+        Nudge[Proactive Nudge]
     end
 
     subgraph Hub[Gaming Hub 서비스]
@@ -317,14 +327,16 @@ flowchart LR
     AccountServer <--> VDServer
     SourceManager <--> VDServer
     VDServer <--> ProfileServer
-    SourceManager <--> HubClient
-    HubClient <--> HubServer
+    SourceManager <--> HubUI
+    HubUI <--> HubServer
+    HubBackground <--> HubServer
+    HubBackground --> Nudge
     HubServer <--> PartnerServer
     PartnerServer <--> ContentServer
     PartnerServer <--> ConsoleClient
     ContentServer --> ConsoleClient
-    HubClient -. "입력 전환·HDMI-CEC 기능" .-> SourceManager
-    HubClient -. "딥링크 명령" .-> ConsoleClient
+    HubUI -. "Tizen Managed API: 입력 전환·HDMI-CEC 기능" .-> SourceManager
+    HubUI -. "딥링크 명령" .-> ConsoleClient
 ```
 
 ## 8. 설계안
