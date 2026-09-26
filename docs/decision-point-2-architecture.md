@@ -46,6 +46,109 @@ Gaming Hub는 Xbox, PlayStation, Nintendo 등 콘솔 파트너의 콘텐츠를 T
 9. 설치 완료 결과를 Gaming Hub 클라이언트에 전달한다.
 10. 사용자의 현재 TV·HDMI·콘솔 상태에 따라 알림, 입력 전환, 딥링크를 수행한다.
 
+### 4.1 사용자 시나리오 A: 미성년 프로파일의 구매 및 원격 설치
+
+미성년 프로파일은 게임 콘텐츠를 탐색할 수 있지만, 상품 노출과 구매 가능 여부는 연령 정책 및 보호자 승인 정책의 적용을 받는다.
+
+1. 사용자가 TV에서 미성년 프로파일을 선택한다.
+2. TV 프로파일 클라이언트가 VD 서버에서 프로파일 유형과 이용 정책을 확인한다.
+3. Gaming Hub 클라이언트가 미성년 프로파일에 허용된 콘솔 게임 콘텐츠만 노출한다.
+4. 사용자가 게임 상세 정보를 확인하고 구매를 요청한다.
+5. Gaming Hub 서버가 미성년 프로파일의 구매 가능 여부를 확인한다.
+6. 보호자 승인이나 추가 인증이 필요한 경우 해당 절차를 완료한다.
+7. 결제 시스템이 결제를 처리하고, Gaming Hub 서버가 결제 결과를 검증한다.
+8. 사용자가 설치할 콘솔 장치를 선택한다.
+9. Gaming Hub 서버가 콘솔 연동 상태와 설치 가능 여부를 확인한다.
+10. 원격 설치 서버를 통해 선택한 콘솔에 설치를 요청한다.
+11. 설치 상태와 완료 결과를 Gaming Hub 클라이언트에 전달한다.
+12. 설치가 완료되면 사용자에게 알리고, 정책과 현재 TV 상태에 따라 딥링크를 수행한다.
+
+```mermaid
+sequenceDiagram
+    actor User as 미성년 사용자
+    participant TV as TV 프로파일 클라이언트
+    participant VD as 삼성 VD 서버
+    participant Hub as Gaming Hub 서버
+    participant Pay as 결제 시스템
+    participant Install as 원격 설치 서버
+    participant Console as 콘솔 장치
+
+    User->>TV: 미성년 프로파일 선택
+    TV->>VD: 프로파일 및 이용 정책 조회
+    VD-->>TV: 미성년 프로파일 정책 반환
+    TV->>Hub: 허용 콘텐츠 조회
+    Hub-->>TV: 정책에 맞는 게임 콘텐츠 반환
+    User->>TV: 게임 상세 확인 및 구매 요청
+    TV->>Hub: 구매 가능 여부 확인
+    Hub-->>TV: 보호자 승인·추가 인증 필요 여부
+    opt 승인 또는 추가 인증 필요
+        TV->>VD: 승인 상태 확인
+        VD-->>TV: 승인 결과 반환
+    end
+    TV->>Pay: 결제 요청
+    Pay-->>Hub: 결제 결과 통지
+    Hub->>Pay: 결제 결과 검증
+    Pay-->>Hub: 검증 결과 반환
+    User->>TV: 설치할 콘솔 장치 선택
+    TV->>Hub: 설치 요청
+    Hub->>Install: 장치 상태 확인 및 원격 설치 요청
+    Install->>Console: 게임 설치
+    Console-->>Install: 설치 상태·완료 결과
+    Install-->>Hub: 설치 결과 통지
+    Hub-->>TV: 설치 결과 및 실행 안내
+```
+
+### 4.2 사용자 시나리오 B: 성인 프로파일의 구매 및 원격 설치
+
+성인 프로파일은 해당 지역과 계정 정책이 허용하는 범위에서 게임 콘텐츠를 탐색하고 구매한 뒤, 연결된 콘솔 장치에 원격 설치를 요청한다.
+
+1. 사용자가 TV에서 성인 프로파일을 선택한다.
+2. TV 프로파일 클라이언트가 VD 서버에서 프로파일 상태를 확인한다.
+3. Gaming Hub 클라이언트가 성인 프로파일에 허용된 콘솔 게임 콘텐츠를 노출한다.
+4. 사용자가 게임 상세 정보와 가격을 확인하고 구매를 요청한다.
+5. Gaming Hub 서버가 계정·프로파일·지역 정책을 확인한다.
+6. 결제 시스템이 결제를 처리하고, Gaming Hub 서버가 결제 결과를 검증한다.
+7. 사용자가 설치할 콘솔 장치를 선택한다.
+8. Gaming Hub 서버가 콘솔 연동 상태와 설치 가능 여부를 확인한다.
+9. 원격 설치 서버를 통해 선택한 콘솔에 설치를 요청한다.
+10. 설치 상태와 완료 결과를 Gaming Hub 클라이언트에 전달한다.
+11. 설치가 완료되면 사용자에게 알리고, 사용자의 현재 TV 상태에 따라 콘솔 입력 전환과 딥링크를 수행한다.
+
+```mermaid
+sequenceDiagram
+    actor User as 성인 사용자
+    participant TV as TV 프로파일 클라이언트
+    participant VD as 삼성 VD 서버
+    participant Hub as Gaming Hub 서버
+    participant Pay as 결제 시스템
+    participant Install as 원격 설치 서버
+    participant Console as 콘솔 장치
+
+    User->>TV: 성인 프로파일 선택
+    TV->>VD: 프로파일 상태 조회
+    VD-->>TV: 성인 프로파일 상태 반환
+    TV->>Hub: 콘솔 게임 콘텐츠 조회
+    Hub-->>TV: 상품 목록 및 상세 정보 반환
+    User->>TV: 상품 확인 및 구매 요청
+    TV->>Hub: 구매 요청
+    Hub->>Hub: 계정·프로파일·지역 정책 확인
+    TV->>Pay: 결제 요청
+    Pay-->>Hub: 결제 결과 통지
+    Hub->>Pay: 결제 결과 검증
+    Pay-->>Hub: 검증 결과 반환
+    User->>TV: 설치할 콘솔 장치 선택
+    TV->>Hub: 설치 요청
+    Hub->>Install: 장치 상태 확인 및 원격 설치 요청
+    Install->>Console: 게임 설치
+    Console-->>Install: 설치 상태·완료 결과
+    Install-->>Hub: 설치 결과 통지
+    Hub-->>TV: 설치 결과 및 실행 안내
+    opt 사용자가 실행을 선택하고 콘솔 전환 가능
+        TV->>Console: 입력 전환 및 딥링크 명령
+        Console-->>TV: 게임 상세 화면 표시
+    end
+```
+
 ## 5. 기술적 어려움과 미결정 사항
 
 - 삼성 계정, TV 프로파일, 파트너 계정, 콘솔 장치 식별자의 매핑 방식
