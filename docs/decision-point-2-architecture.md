@@ -103,38 +103,74 @@ sequenceDiagram
     actor User as 성인 사용자
     participant Profile as TV 프로파일 클라이언트
     participant HubClient as Gaming Hub 클라이언트
-    participant VD as 삼성 VD 서버
     participant Hub as Gaming Hub 서버
-    participant Pay as 결제 시스템
-    participant Install as 원격 설치 서버
+    participant CheckoutClient as 삼성 체크아웃 클라이언트
+    participant CheckoutServer as 삼성 체크아웃 결제 시스템
+    participant PartnerPay as 파트너 결제 시스템
+    participant Partner as 콘솔 파트너 서버·클라이언트
+    participant SourceManager as Source Manager
     participant Console as 콘솔 장치
 
-    User->>Profile: 성인 프로파일 선택
-    Profile->>VD: 프로파일 상태 조회
-    VD-->>Profile: 성인 프로파일 상태 반환
-    Profile->>HubClient: 선택된 프로파일 상태 전달
+    Note over User,Profile: 성인 프로파일이 이미 선택된 상태
+    User->>HubClient: Gaming Hub 클라이언트 진입
     HubClient->>Hub: 콘솔 게임 콘텐츠 조회
     Hub-->>HubClient: 상품 목록 및 상세 정보 반환
     HubClient-->>User: 상품 목록 및 상세 정보 노출
     User->>HubClient: 상품 확인 및 구매 요청
-    HubClient->>Hub: 구매 요청
-    Hub->>Hub: 계정·프로파일·지역 정책 확인
-    HubClient->>Pay: 결제 요청
-    Pay-->>Hub: 결제 결과 통지
-    Hub->>Pay: 결제 결과 검증
-    Pay-->>Hub: 검증 결과 반환
+    HubClient->>Hub: 성인 프로파일 구매 요청
+    alt 삼성 체크아웃 결제
+        HubClient->>CheckoutClient: 삼성 체크아웃 결제 화면 실행
+        CheckoutClient->>CheckoutServer: 결제 요청
+        CheckoutServer-->>CheckoutClient: 결제 진행·완료 결과
+        CheckoutServer->>Hub: 결제 완료 웹훅 호출
+    else 파트너 결제 시스템
+        HubClient->>PartnerPay: 파트너 결제 요청
+        PartnerPay-->>HubClient: QR 코드 반환
+        HubClient-->>User: 파트너 결제 QR 코드 표시
+        User->>PartnerPay: 모바일로 QR 스캔 및 결제
+        PartnerPay-->>User: 결제 인증·결과 제공
+        PartnerPay->>Hub: 결제 완료 웹훅 호출
+    end
+    Hub->>Hub: 웹훅 검증 및 결제 완료 상태 확정
+    HubClient->>Hub: 결제 상태 최종 조회
+    Hub-->>HubClient: 결제 완료 결과 반환
+    HubClient-->>User: 결제 완료 및 원격 설치 안내
+    Note over Hub,HubClient: Step 1 종료: 결제 완료와 설치 상태 분리
+    Note over Hub,HubClient: Step 2 시작: 원격 설치
+    HubClient->>Partner: 원격 설치 가능한 콘솔 장치 목록 조회
+    Partner-->>HubClient: 장치 목록·전원 상태·설치 가능 상태 반환
+    HubClient-->>User: 선택 가능한 콘솔 장치 목록 표시
     User->>HubClient: 설치할 콘솔 장치 선택
-    HubClient->>Hub: 설치 요청
-    Hub->>Install: 장치 상태 확인 및 원격 설치 요청
-    Install->>Console: 게임 설치
-    Console-->>Install: 설치 상태·완료 결과
-    Install-->>Hub: 설치 결과 통지
-    Hub-->>HubClient: 설치 결과 및 실행 안내
-    HubClient-->>User: 설치 결과 및 실행 안내
-    opt 사용자가 실행을 선택하고 콘솔 전환 가능
-        HubClient->>SourceManager: 입력 상태 확인·전환 요청
-        SourceManager->>Console: 입력 전환
-        Console-->>HubClient: 게임 상세 화면 표시 결과
+    HubClient->>Partner: 선택 장치 설치 준비 요청
+    Partner-->>HubClient: TV 연결 여부·전원 상태 반환
+    alt TV에 연결된 콘솔이며 전원 꺼짐
+        HubClient->>SourceManager: Tizen Managed API로 HDMI-CEC 전원 켜기 요청
+        SourceManager->>Console: Tizen System API로 콘솔 전원 켜기
+        Console-->>SourceManager: 전원 켜짐 상태
+        SourceManager-->>HubClient: 전원 켜짐 결과
+        HubClient->>Partner: 콘솔 준비 완료 전달
+        Partner->>Console: 원격 설치 시작
+    else 설치 가능한 원격 콘솔
+        HubClient->>Partner: 원격 설치 시작 요청
+        Partner->>Console: 원격 설치 시작
+    end
+    loop 설치 상태 대기
+        Partner-->>HubClient: 설치 진행 상태 또는 오류 메시지
+        HubClient-->>User: 설치 진행 상태 갱신
+    end
+    alt 설치 오류
+        HubClient-->>User: 오류 알림 및 콘솔 전환 여부 표시
+    else 설치 완료
+        Partner->>Hub: 설치 완료 웹훅 호출
+        Hub->>Hub: 설치 완료 상태 검증·갱신
+        Hub-->>HubClient: 설치 완료 결과 전달
+        HubClient-->>User: 글로벌 설치 완료 알림 표시
+        User->>HubClient: 게임 실행 선택
+        HubClient->>SourceManager: 선택 콘솔로 HDMI 입력 전환 요청
+        SourceManager-->>HubClient: 입력 전환 결과
+        HubClient->>Partner: 게임 상세 화면 딥링크 요청
+        Partner->>Console: 네트워크 딥링크 명령
+        Console-->>User: 게임 실행 직전 상세 화면 표시
     end
 ```
 
