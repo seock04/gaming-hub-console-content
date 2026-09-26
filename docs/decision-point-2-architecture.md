@@ -113,7 +113,7 @@ sequenceDiagram
     participant CheckoutClient as 삼성 체크아웃 클라이언트
     participant CheckoutServer as 삼성 체크아웃 결제 시스템
     participant PartnerPay as 파트너 결제 시스템
-    participant Partner as 콘솔 파트너 서버·클라이언트
+    participant Partner as 콘솔 파트너 서버
     participant SourceManager as Source Manager
     participant Console as 콘솔 장치
 
