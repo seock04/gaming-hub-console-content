@@ -115,6 +115,7 @@ sequenceDiagram
     participant PartnerPay as 파트너 결제 시스템
     participant Partner as 콘솔 파트너 서버
     participant SourceManager as Source Manager
+    participant Nudge as Proactive Nudge
     participant Console as 콘솔 장치
 
     User->>Profile: 성인 프로파일 선택 요청
@@ -171,16 +172,20 @@ sequenceDiagram
     end
     loop 설치 상태 대기
         Partner-->>HubClient: 설치 진행 상태 또는 오류 메시지
-        HubClient-->>User: 설치 진행 상태 갱신
+        HubClient->>Nudge: 설치 진행 상태 글로벌 노티 요청
+        Nudge-->>User: 설치 진행 상태 팝업 표시
     end
     alt 설치 오류
-        HubClient-->>User: 오류 알림 및 콘솔 전환 여부 표시
+        HubClient->>Nudge: 설치 오류 글로벌 노티 요청
+        Nudge-->>User: 설치 오류 팝업 및 콘솔 전환 안내 표시
     else 설치 완료
         Partner->>Hub: 설치 완료 웹훅 호출
         Hub->>Hub: 설치 완료 상태 검증·갱신
         Hub-->>HubClient: 설치 완료 결과 전달
-        HubClient-->>User: 글로벌 설치 완료 알림 표시
-        User->>HubClient: 설치 완료 알림 선택
+        HubClient->>Nudge: 설치 완료 글로벌 노티 요청
+        Nudge-->>User: 설치 완료 팝업 표시
+        User->>Nudge: 설치 완료 알림 선택
+        Nudge-->>HubClient: 알림 선택 이벤트 전달
         HubClient->>SourceManager: 콘솔 연결 상태 조회
         alt Cold Off: 연결·전원 상태 확인 불가
             SourceManager-->>HubClient: COLD_OFF
