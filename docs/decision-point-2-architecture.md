@@ -79,7 +79,7 @@ sequenceDiagram
     participant PartnerPay as 파트너 결제 시스템
     participant Account as 삼성 계정 서버
     actor Parent as 보호자
-    participant Install as 원격 설치 서버
+    participant Partner as 콘솔 파트너 서버·클라이언트
     participant Console as 콘솔 장치
 
     Note over User,Profile: 미성년 프로파일이 이미 선택된 상태
@@ -141,14 +141,41 @@ sequenceDiagram
     Note over Hub,HubClient: Step 1 종료: 결제 완료 상태 확정
     Note over Hub,HubClient: 결제 완료와 원격 설치는 분리된 상태이며, 설치 실패가 결제 환불을 의미하지 않음
     Note over Hub,HubClient: Step 2 시작 - 원격 설치
+    HubClient->>Partner: 원격 설치 가능한 콘솔 장치 목록 조회
+    Partner-->>HubClient: 장치 목록·전원 상태·설치 가능 상태 반환
+    HubClient-->>User: 선택 가능한 콘솔 장치 목록 표시
     User->>HubClient: 설치할 콘솔 장치 선택
-    HubClient->>Hub: 설치 요청
-    Hub->>Install: 장치 상태 확인 및 원격 설치 요청
-    Install->>Console: 게임 설치
-    Console-->>Install: 설치 상태·완료 결과
-    Install-->>Hub: 설치 결과 통지
-    Hub-->>HubClient: 설치 결과 및 실행 안내
-    HubClient-->>User: 설치 결과 및 실행 안내
+    HubClient->>Partner: 선택 장치 원격 설치 준비 요청
+    Partner-->>HubClient: 선택 장치가 현재 TV 연결 콘솔인지·전원 상태 반환
+    alt 현재 TV에 연결된 콘솔이며 전원 꺼짐
+        HubClient->>TV: HDMI-CEC 전원 켜기 요청
+        TV->>Console: 콘솔 전원 켜기
+        Console-->>TV: 전원 켜짐 상태
+        TV-->>HubClient: 전원 켜짐 결과
+        HubClient->>Partner: 콘솔 전원 켜짐 결과 전달
+        Partner->>Console: 원격 설치 시작
+    else 설치 가능한 원격 콘솔
+        HubClient->>Partner: 원격 설치 시작 요청
+        Partner->>Console: 원격 설치 시작
+    end
+    loop 설치 상태 대기
+        Partner-->>HubClient: 설치 진행 상태 또는 오류 메시지
+        HubClient-->>User: 설치 진행 상태 갱신
+    end
+    alt 설치 오류
+        HubClient-->>User: 오류 알림 및 콘솔 전환 여부 표시
+    else 설치 완료
+        Partner->>Hub: 설치 완료 웹훅
+        Hub->>Hub: 설치 완료 상태 검증·갱신
+        Hub-->>HubClient: 설치 완료 결과 전달
+        HubClient-->>User: 글로벌 설치 완료 알림 표시
+        User->>HubClient: 게임 실행 선택
+        HubClient->>TV: 선택 콘솔로 HDMI 입력 전환 요청
+        TV-->>HubClient: 입력 전환 결과
+        HubClient->>Partner: 게임 상세 화면 딥링크 요청
+        Partner->>Console: 네트워크 딥링크 명령
+        Console-->>User: 게임 실행 직전 상세 화면 표시
+    end
 ```
 
 ### 4.2 사용자 시나리오 B: 성인 프로파일의 구매 및 원격 설치
