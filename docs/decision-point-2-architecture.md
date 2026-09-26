@@ -72,7 +72,7 @@ sequenceDiagram
     participant TV as TV 클라이언트
     participant Profile as TV 프로파일 클라이언트
     participant HubClient as Gaming Hub 클라이언트
-    participant VD as 삼성 VD 서버
+    participant ProfileServer as 프로파일 서버
     participant Hub as Gaming Hub 서버
     participant Pay as 결제 시스템
     participant Install as 원격 설치 서버
@@ -82,13 +82,11 @@ sequenceDiagram
     User->>TV: TV 사용 시작
     User->>HubClient: Gaming Hub 클라이언트 진입
     HubClient->>Profile: 현재 프로파일 유형 조회 API 호출
-    Profile->>VD: 현재 프로파일 유형·상태 조회
-    VD-->>Profile: 성인 또는 미성년 프로파일 정보 반환
-    Profile-->>HubClient: 현재 프로파일 유형 반환
+    Profile-->>HubClient: 현재 프로파일 유형·상태 반환
     alt 미성년 프로파일
         HubClient->>Profile: 미성년 프로파일 정책 조회 API 호출
-        Profile->>VD: 미성년 정책 조회
-        VD-->>Profile: 미성년 정책 반환
+        Profile->>ProfileServer: 미성년 정책 조회
+        ProfileServer-->>Profile: 미성년 정책 반환
         Profile-->>HubClient: 미성년 정책 반환
         HubClient->>HubClient: 미성년 정책 적용
     else 성인 프로파일
@@ -102,8 +100,8 @@ sequenceDiagram
     Hub-->>HubClient: 보호자 승인·추가 인증 필요 여부
     opt 승인 또는 추가 인증 필요
         HubClient->>Profile: 승인에 필요한 프로파일 상태 확인
-        Profile->>VD: 승인 상태 확인
-        VD-->>Profile: 승인 결과 반환
+        Profile->>ProfileServer: 승인 상태 확인
+        ProfileServer-->>Profile: 승인 결과 반환
         Profile-->>HubClient: 승인 결과 전달
     end
     HubClient->>Pay: 결제 요청
