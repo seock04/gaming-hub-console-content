@@ -61,7 +61,54 @@ Gaming Hub는 Xbox, PlayStation, Nintendo 등 콘솔 파트너의 콘텐츠를 T
 - 설치 완료 이벤트의 지연·중복·순서 뒤바뀜 처리
 - 개인정보, 결제 정보, 미성년자 보호를 포함한 보안 및 감사 추적
 
-## 6. 설계안
+## 6. 시스템 모듈 및 관계
+
+다음 관계도는 DP2에서 고려하는 주요 모듈의 경계를 나타낸다. 삼성 계정은 모바일·TV·가전 등 전사 서비스에서 공유되는 계정이며, TV 프로파일은 TV 클라이언트와 삼성 VD 서버 범위에서만 관리되는 별도 개념이다.
+
+콘솔 파트너 서버는 파트너 계정·서비스 제어 영역과 실제 게임 콘텐츠 다운로드 영역으로 나누어 표현한다. 콘솔 파트너 클라이언트는 실제 콘솔 장치 내부에서 동작하는 소프트웨어다. 딥링크는 별도 모듈이 아니라 Gaming Hub 클라이언트와 콘솔 파트너 클라이언트 사이에서 수행되는 기능이다.
+
+```mermaid
+flowchart LR
+    subgraph Enterprise[삼성 전사 영역]
+        AccountClient[삼성 계정 클라이언트\n모바일·TV·가전]
+        AccountServer[삼성 계정 서버]
+    end
+
+    subgraph VD[삼성 VD 영역]
+        VDServer[삼성 VD 서버]
+        ProfileServer[TV 프로파일 서버\n성인·미성년 프로파일]
+    end
+
+    subgraph TV[삼성 TV]
+        TVClient[TV 클라이언트]
+        HubClient[Gaming Hub 클라이언트]
+    end
+
+    subgraph Hub[Gaming Hub 서비스]
+        HubServer[Gaming Hub 서버]
+    end
+
+    subgraph Partner[Xbox·PlayStation·Nintendo 등 콘솔 파트너]
+        PartnerServer[콘솔 파트너 서버\n계정·서비스 제어]
+        ContentServer[게임 콘텐츠 서버\n다운로드 콘텐츠]
+        ConsoleClient[콘솔 파트너 클라이언트\n콘솔 장치 내부]
+    end
+
+    AccountClient <--> AccountServer
+    AccountServer <--> VDServer
+    TVClient <--> VDServer
+    VDServer <--> ProfileServer
+    TVClient <--> HubClient
+    HubClient <--> HubServer
+    HubServer <--> PartnerServer
+    PartnerServer <--> ContentServer
+    PartnerServer <--> ConsoleClient
+    ContentServer --> ConsoleClient
+    HubClient -. "딥링크·입력 전환 기능" .-> TVClient
+    HubClient -. "딥링크 명령" .-> ConsoleClient
+```
+
+## 7. 설계안
 
 ### 6.1 설계안 1: [제목 작성]
 
@@ -124,7 +171,7 @@ flowchart LR
 
 - [작성]
 
-## 7. 시나리오 검토
+## 8. 시나리오 검토
 
 | 시나리오 | 기대 동작 | 실패·예외 처리 | 관련 품질 속성 |
 |---|---|---|---|
@@ -137,7 +184,7 @@ flowchart LR
 | 설치 완료·콘솔 사용 중 | 현재 세션을 확인한 뒤 전환 여부 결정 | 강제 전환하지 않음 | [작성] |
 | 중복 이벤트 수신 | 동일 주문·설치 건을 한 번만 처리 | 멱등성 보장 | [작성] |
 
-## 8. 품질 속성
+## 9. 품질 속성
 
 DP2와 직접 연관된 품질 속성 세 가지를 선정하고, 각 설계안이 이를 얼마나 만족하는지 평가한다.
 
@@ -155,7 +202,7 @@ DP2와 직접 연관된 품질 속성 세 가지를 선정하고, 각 설계안�
 | 보안 및 안전성 | [작성] | [작성] | [작성] | [작성] | [작성] |
 | 사용성 및 응답성 | [작성] | [작성] | [작성] | [작성] | [작성] |
 
-## 9. 종합 비교
+## 10. 종합 비교
 
 | 구분 | 설계안 1: [제목] | 설계안 2: [제목] |
 |---|---|---|
@@ -168,7 +215,7 @@ DP2와 직접 연관된 품질 속성 세 가지를 선정하고, 각 설계안�
 | 결제·설치 상태 신뢰성 | [작성] | [작성] |
 | 주요 트레이드오프 | [작성] | [작성] |
 
-## 10. 결론 및 선택
+## 11. 결론 및 선택
 
 ### 권장 설계안
 
@@ -182,7 +229,7 @@ DP2와 직접 연관된 품질 속성 세 가지를 선정하고, 각 설계안�
 
 - [작성]
 
-## 11. 용어 및 참고
+## 12. 용어 및 참고
 
 - DP: Decision Point
 - HDMI-CEC: HDMI 연결 장치 간 제어 신호를 전달하는 표준
